@@ -154,10 +154,8 @@ float get_motor_speed_factor(float volts) {
   return 1;
 
 }
-// 10.5:~13.8 RPS
-// 9.5: ~12.5 RoF
-// 8.0 gives me 10.5 RPM. 
-constexpr float motor_speed = 9.5;
+// 1000 RPM 12V motor. 
+constexpr float motor_speed = 7.5;
 
 void update_motors_speed_factors() {
   analogWrite(PWM, 255.0 * get_motor_speed_factor(motor_speed));
