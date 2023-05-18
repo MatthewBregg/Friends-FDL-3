@@ -582,6 +582,66 @@ void setup() {
 
 }
 
+// Ensure the RPM isn't set to an unreasonable value;
+// If you are hitting the min/max RPM, then blink the led three times.
+// 36K is the rough max RPM the motor can hit on a 4S, but going that high isn't really sensible so restrict us to 25.
+unsigned long ValidateRpm(unsigned long rpm) {
+  if ( rpm <= 10,000) {
+    blink_led_three_times();
+    return 10,000; 
+    }
+  if ( rpm >= 25,000) {
+     blink_led_three_times();
+    return 25,000;
+     }
+  return rpm;
+}
+
+void boot_into_speed_set_mode() {
+  unsigned long rpm = read_speed_from_eeprom();
+  if ((forward_selector_active() || backward_selector_active()) && readTrigger()) {
+    blink_led_three_times();
+    // Enter speed set mode
+    blip_flywheel_drives(500);
+    // Trap until both trigger and selectors released;
+    while (readTrigger() || forward_selector_active() || backward_selector_active()) { ;; }
+    // Now enter set loop
+    while(true) {
+      if (forward_selector_debounce_sync_active()) {
+        rpm += 500;
+        rpm = ValidateRpm(rpm);
+        updateSpeedFixed(rpm);
+        delay(100);
+        blip_flywheel_drives(800);
+        // Trap until selector released.
+        while(forward_selector_active()) { ;; }
+      }
+      if (backward_selector_debounce_sync_active()) {
+        rpm -= 500;
+        rpm = ValidateRpm(rpm);
+        updateSpeedFixed(rpm);
+        delay(100);
+        blip_flywheel_drives(800);
+        // Trap until selector released.
+        while(backward_selector_active()) { ;; }
+      }
+      if (readAndDebounceTriggerSync()) {
+        write_speed_to_eeprom(rpm);
+        // New speed written, exit the loop;
+        break;
+      }
+    }
+    // Speed set mode done, catch here until blaster power off.
+    while (true) {
+      digitalWrite(LED_BUILTIN, HIGH);
+      delay(1000);
+      digitalWrite(LED_BUILTIN, LOW);
+      delay(1000);
+    }
+  }
+  return;
+}
+
 void loop() {
 
   if (firstRun) {

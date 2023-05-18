@@ -7,3 +7,14 @@ const int trigSwitchB = 7;
 bool readTrigger() {
   return !digitalRead(trigSwitchA) && digitalRead(trigSwitchB);
 }
+
+bool readAndDebounceTriggerSync() {
+  // Is button initially down?
+  if (readTrigger()) {
+    delay(25);
+    // Return if button is still down after a debounce delay
+    return readTrigger();
+  }
+  // Button was never down, return false.
+  return false;
+}
