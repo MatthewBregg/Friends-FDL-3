@@ -1,3 +1,5 @@
+#include "selectors.h"
+
 //// PINOUTS - S-Core 1.0/1.5
 // AVR pin - Arduino IDE pin - functionality
 // Pusher Driver Chips TB67H420FTG
@@ -15,6 +17,8 @@
 // --  - 8  - INA2
 // PB3 - 11 - PWM A/B
 
+// A2-A5 are currently free.
+// A2 and A3 are used for the input selector.
 
 // Input
 // PC1 - A1 - VOLTIMETER
@@ -533,6 +537,10 @@ void setup() {
   pinMode(0, INPUT);
   pinMode(1, INPUT);
 
+  // Selector switches
+  pinMode(A2, INPUT_PULLUP);
+  pinMode(A3, INPUT_PULLUP);
+
   //pin 9,10 flywheel motor controller PWM throttle signal
   pinMode(9, OUTPUT);
   pinMode(10, OUTPUT);
@@ -627,6 +635,7 @@ void loop() {
     firstRun = 0;
   }
   disableGovernorInterrupt();    //It shouldn't have been on - make very sure
+  check_selector_input();
   //initial debounce on trigger from idle state. Safety measure.
   prevTrigState = currTrigState;
   currTrigState = readTrigger();
