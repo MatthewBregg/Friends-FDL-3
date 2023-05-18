@@ -50,19 +50,40 @@ void blip_flywheel_drives(unsigned long duration_ms) {
   OCR1A = 230;                                   //Shutdown motors
   OCR1B = 230;
 }
-
+bool full_auto = true;
+unsigned long forward_depressed = 0;
+unsigned long backward_depressed = 0;
+unsigned long depress_time;
 void check_selector_input() {
 
-  while (forward_selector_active()) {
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(100);
-    digitalWrite(LED_BUILTIN, LOW);
-    delay(100);
+  if (forward_selector_active()) {
+    // If forward depressed is 0, record current time.
+     if (forward_depressed == 0) {
+         forward_depressed = millis();
+     } else {
+       // If forward depressed is not 0, then check how long the forward selector has been active for. If over depress_time, then enable full auto.
+      if  ((millis() - forward_depressed) > depress_time) {
+        full_auto = true;
+      }
+     }
+  } else {
+    // Reset countdown
+    forward_depressed = 0;
   }
-  while (backward_selector_active()) {
-    digitalWrite(LED_BUILTIN, HIGH);
-    delay(1000);
-    digitalWrite(LED_BUILTIN, LOW);
-    delay(1000);
+
+  if (backward_selector_active()) {
+    // If backward depressed is 0, record current time.
+     if (backward_depressed == 0) {
+         backward_depressed = millis();
+     } else {
+       // If backward depressed is not 0, then check how long the backward selector has been active for. If over depress_time, then disable full auto.
+      if  ((millis() - backward_depressed) > depress_time) {
+        full_auto = false;
+      }
+     }
+  } else {
+    // Reset countdown
+    backward_depressed = 0;
   }
+
 }

@@ -629,7 +629,7 @@ void boot_into_speed_set_mode() {
         // Trap until selector released.
         while(backward_selector_active()) { ;; }
       }
-      if (readAndDebounceTriggerSync()) {
+      if (readAndDebounceTriggerSync(25)) {
         write_speed_to_eeprom(rpm);
         // New speed written, exit the loop;
         break;
@@ -683,6 +683,7 @@ void loop() {
     firstRun = 0;
   }
   disableGovernorInterrupt();    //It shouldn't have been on - make very sure
+
   check_selector_input();
   //initial debounce on trigger from idle state. Safety measure.
   prevTrigState = currTrigState;
@@ -758,46 +759,65 @@ void loop() {
         log(finished_d0 - started_revving);
         log(finished_d1 - started_revving);
         
-        set_pusher(true);
-        // IF not loaded load a ball
+       
+        // Limit should be set (we should know where pusher is).
+        // If we don't, then drive pusher until we do. 
+        // This might result in firing an extra dart, but that's preferable to not firing a dart (at least one per trigger pull).
         // Timeout on all operations in case of empty mag/jams.
         unsigned long timeout = 2000; // Pusher Stall Protection Timeout.
         unsigned long timout_counter = millis();
         bool timed_out = false;
+        // Once the pusher is going we must keep updating the motor speed factor.
+        // This is because flywheel start on even a moderately high IR pack will cause sag, 
+        // and thus a higher pusher speed to compensate. That sag will go away once the drives are spun up, 
+        // but if we don't keep checking for that, we can have the pusher going to fast and get a runaway.
+        set_pusher(true);
+        // Attempt to find pusher if needed (rarely should be).
         while (!readLimit() && !timed_out) {
-          timed_out = ((millis() - timout_counter) > timeout);
-        }
-        // Reset timeout.
-        timout_counter = millis();
-        // Update motor speed
-        update_motors_speed_factors();
-        delay(5);
-        // Fire the loaded ball
-        while (!timed_out && readLimit()) {
-          timed_out = ((millis() - timout_counter) > timeout);
-        }
-        // Reset timeout.
-        timout_counter = millis();
-        // Update motor speed
-        update_motors_speed_factors();
-        delay(5);
-        // While the trigger remains down, keep firing.
-        bool limit_switch_value = readLimit();
-        while (readTrigger() && !timed_out) {
-          bool new_limit_switch_value = readLimit();
-          if ( limit_switch_value != new_limit_switch_value ) {
-            // Reset timeout.
-            timout_counter = millis() - 5;
-          }
-          limit_switch_value = new_limit_switch_value;
           timed_out = ((millis() - timout_counter) > timeout);
           // Also continously update motor speed during firing.
           update_motors_speed_factors();
         }
+        // Reset timeout.
         timout_counter = millis();
-        // Load a new ball, if not already loaded.
+        delay(5);
+        // FIRE A DART!
+        while (!timed_out && readLimit()) {
+          timed_out = ((millis() - timout_counter) > timeout);
+          // Also continously update motor speed during firing.
+            update_motors_speed_factors();
+        }
+        // Continue firing if in full auto.
+        if (full_auto) {
+          // Reset timeout.
+          timout_counter = millis();
+          // Update motor speed
+          update_motors_speed_factors();
+          delay(5);
+          // While the trigger remains down, keep firing.
+          bool limit_switch_value = readLimit();
+          while (readTrigger() && !timed_out) {
+            bool new_limit_switch_value = readLimit();
+            if ( limit_switch_value != new_limit_switch_value ) {
+              // Reset timeout.
+              timout_counter = millis() - 5;
+            }
+            limit_switch_value = new_limit_switch_value;
+            timed_out = ((millis() - timout_counter) > timeout);
+            // Also continously update motor speed during firing.
+            update_motors_speed_factors();
+          }
+        } else {
+          // Give the pusher time to fully clear the limit switch.
+          delay(20);
+        }
+        // Reset timeout
+        timout_counter = millis();
+        // Home the pusher before ending the firing routine.
         while (!readLimit() && !timed_out) {
           timed_out = ((millis() - timout_counter) > timeout);
+          // Also continously update motor speed during firing.
+          update_motors_speed_factors();
         }
 
         // Done firing.
@@ -811,8 +831,8 @@ void loop() {
         lastTriggerUp = millis(); //Not ACTUALLY trigger up any more due to the disconnector trap. A burst disconnect is a pseudo trigger up.
         //Main disconnector trap - This is where we land if firing ends and trigger is still down.
         // This can happen if we encounter a `timeout` in the above firing code.
-        while (readTrigger() && timed_out) {
-          delay(2);
+        while (readAndDebounceTriggerSync(5) && (timed_out || !full_auto)) { // Also trap here when the trigger is down after a semi burst.
+          delay(1);
         }
       }
     }

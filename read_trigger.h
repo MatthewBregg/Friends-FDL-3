@@ -8,10 +8,10 @@ bool readTrigger() {
   return !digitalRead(trigSwitchA) && digitalRead(trigSwitchB);
 }
 
-bool readAndDebounceTriggerSync() {
+bool readAndDebounceTriggerSync(unsigned long m) {
   // Is button initially down?
   if (readTrigger()) {
-    delay(25);
+    delay(m);
     // Return if button is still down after a debounce delay
     return readTrigger();
   }
