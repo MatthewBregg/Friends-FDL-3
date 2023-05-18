@@ -1,4 +1,6 @@
 #include "selectors.h"
+#include "read_trigger.h"
+#include "blaster_save_eeprom.h"
 
 //// PINOUTS - S-Core 1.0/1.5
 // AVR pin - Arduino IDE pin - functionality
@@ -125,8 +127,6 @@ const int A_INB2 = A0;
 const int limitSwitchA = 4;
 const int limitSwitchB = 12;
 
-const int trigSwitchA = 6;
-const int trigSwitchB = 7;
 
 const int voltimeter = A1;
 
@@ -190,12 +190,6 @@ void set_pusher(bool on) {
 // Correct plug in orientation: Blue wire towards the main trigger connector.
 bool readLimit() {
   return digitalRead(limitSwitchA) && !digitalRead(limitSwitchB);
-}
-
-// Returns true IFF the trigger switch is depressed.
-// Correct plug orientation: Stripe on heat shrink towards edge of board. Should curve away from arduino.
-bool readTrigger() {
-  return !digitalRead(trigSwitchA) && digitalRead(trigSwitchB);
 }
 
 bool decelerateBoltToSwitch() {
@@ -597,6 +591,11 @@ void loop() {
     if (readLimit()) {
       log("Limit is down");
     }
+    // If the trigger and selector switch are set, boot into speed set mode.
+    // If in speed set mode, this function will never return.
+    // Otherwise;
+    // This function will immedietely return if the trigger and limit switch are released.
+    boot_into_speed_set_mode();
     //Wait for SimonK boot and arm (TBD value, Selftest already waits 500ms)
     delay(500);
     //Do POST
@@ -606,23 +605,8 @@ void loop() {
     // Set the speed
     delay(100); //Some anti-noise buffer
     while (gov_update_repeats) {
-      // No Hop up, long barrel
-      // 16K RPM = 139-140FPS. ??? MS REV time. This is probably a tad conservative for 150 FPS games.
-      // 16.5K RPM = 146 FPS. 
-      // No Hop up, short barrel
-      // 23K RPM =  175 FPS! But also 700 MS rev time!! That's not gonna work.
-      // 12K RPM = 110 FPS, 190 MS rev time.  I guess acceptable, but I'm not really happy with that....
-      // 9k RPM = 80 FPS, 150 MS rev time.
-      // However!! The above 3 rev times are all on the NiMH pack, which is a bottleneck. On a 4S LIPO at roughly the same voltage (15.1 vs 14.2), I got
-      // 9k RPM = 80 FPS, 100 MS rev time.
-      // 13K RPM = 120 FPS, 120 MS REV time. This is probably ideal for 130 FPS games. This is what I set the blaster to on the final release. 
-      // 16.5K RPM = 155 FPS, Probably ideal for NOMAD/160 FPS games.
-      // 17K RPM = 165 FPS, 130-150 MS rev time. Wow, now I'm impressed.
-      // 12.5K RPM = 118-123 FPS, high of 125. No hop up. With hop up: 113-115, with one lowball at 105. Leaving it as this for UF HvZ.
-      // Ideas to lower this number: (With the LIPO pack, this isn't needed anymore).
-      // -- Increase crush. I like the current crush level though, and using a LIPO pack with more current sourcing ability solved this problem.
-      // -- Print lighter (ASA, And possible lower infill/layers very carefully!). ASA is on the table, but considering we no longer have rev time issues, no need to shirk on infill/layers.
-      updateSpeedFixed(12500); //Nb: updateGovernorBoth blocks while a packet is being transmitted, thus so does this call.
+     // Set the flywheel speeds.
+      updateSpeedFixed(read_speed_from_eeprom()); //Nb: updateGovernorBoth blocks while a packet is being transmitted, thus so does this call.
       delay(20); //Some anti-noise buffer
       gov_update_repeats--;
     }
