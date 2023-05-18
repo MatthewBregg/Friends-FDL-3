@@ -610,8 +610,11 @@ void boot_into_speed_set_mode() {
     // Trap until both trigger and selectors released;
     while (readTrigger() || forward_selector_active() || backward_selector_active()) { ;; }
     // Now enter set loop
+    // Keep track of if we have changed our RPM value.
+    unsigned long count = 0;
     while(true) {
       if (forward_selector_debounce_sync_active()) {
+        ++count;
         rpm += 1000;
         rpm = ValidateRpm(rpm);
         updateSpeedFixed(rpm);
@@ -621,6 +624,7 @@ void boot_into_speed_set_mode() {
         while(forward_selector_active()) { ;; }
       }
       if (backward_selector_debounce_sync_active()) {
+        ++count;
         rpm -= 1000;
         rpm = ValidateRpm(rpm);
         updateSpeedFixed(rpm);
@@ -631,6 +635,10 @@ void boot_into_speed_set_mode() {
       }
       if (readAndDebounceTriggerSync(25)) {
         write_speed_to_eeprom(rpm);
+        if (count == 0) {
+          // Special case! If you don't adjust the speed at all in programming mode, flip whether we default to full or semi auto!!
+          set_full_auto_default(!read_full_auto_default());
+        }
         // New speed written, exit the loop;
         break;
       }
@@ -678,6 +686,9 @@ void loop() {
     ////Speed setpoint and associated parameters fed to STC stuff is now set in concrete for the remainder of this uptime.
     //Verify set speed. Nb: Since this happens seamlessly after user-adjusting speed (the motors were still running) there is no "blip"
     speedtrap();                 //Bust any wrong flywheel speeds now before firing is allowed. Starts motors if they weren't already and shuts them down afterward.
+
+    // Set if we should default to full auto
+    full_auto = read_full_auto_default();
     //Fell through = Cleared for launch.
     //clear flag
     firstRun = 0;

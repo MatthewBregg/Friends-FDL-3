@@ -11,6 +11,18 @@ EEPROM.write(1, value);
 
 }
 
+void set_full_auto_default(bool full_auto) {
+  if (full_auto) {
+    EEPROM.write(2,(byte)1);
+  } else {
+    EEPROM.write(2,(byte)0);
+  }
+}
+bool read_full_auto_default() {
+  byte value = EEPROM.read(2);
+  return value != 0;
+}
+
 unsigned long read_speed_from_eeprom() {
   byte value_1 = EEPROM.read(0);
   byte value_2 = EEPROM.read(1);
