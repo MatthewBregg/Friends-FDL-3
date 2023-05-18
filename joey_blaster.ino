@@ -586,14 +586,14 @@ void setup() {
 // If you are hitting the min/max RPM, then blink the led three times.
 // 36K is the rough max RPM the motor can hit on a 4S, but going that high isn't really sensible so restrict us to 25.
 unsigned long ValidateRpm(unsigned long rpm) {
-  if ( rpm <= 10,000) {
+  if ( rpm <= 10000) {
     blink_led_three_times();
-    return 10,000; 
-    }
-  if ( rpm >= 25,000) {
-     blink_led_three_times();
-    return 25,000;
-     }
+    return 10000; 
+  }
+  if ( rpm >= 25000) {
+    blink_led_three_times();
+    return 25000;
+  }
   return rpm;
 }
 
@@ -612,7 +612,7 @@ void boot_into_speed_set_mode() {
         rpm = ValidateRpm(rpm);
         updateSpeedFixed(rpm);
         delay(100);
-        blip_flywheel_drives(800);
+        blip_flywheel_drives(400);
         // Trap until selector released.
         while(forward_selector_active()) { ;; }
       }
@@ -621,7 +621,7 @@ void boot_into_speed_set_mode() {
         rpm = ValidateRpm(rpm);
         updateSpeedFixed(rpm);
         delay(100);
-        blip_flywheel_drives(800);
+        blip_flywheel_drives(400);
         // Trap until selector released.
         while(backward_selector_active()) { ;; }
       }
