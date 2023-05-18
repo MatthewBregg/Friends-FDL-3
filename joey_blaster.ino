@@ -585,14 +585,18 @@ void setup() {
 // Ensure the RPM isn't set to an unreasonable value;
 // If you are hitting the min/max RPM, then blink the led three times.
 // 36K is the rough max RPM the motor can hit on a 4S, but going that high isn't really sensible so restrict us to 25.
+// 17K (5 clicks) gave a consistent 116-120
+// 18K gave a consistent 127-131.
 unsigned long ValidateRpm(unsigned long rpm) {
-  if ( rpm <= 10000) {
+  // Roughly translates to ~80FPS, AKA, stock.
+  if ( rpm <= 12000) {
     blink_led_three_times();
-    return 10000; 
+    return 12000; 
   }
-  if ( rpm >= 25000) {
+  // Roughly translates to ~170 FPS.
+  if ( rpm >= 28000) {
     blink_led_three_times();
-    return 25000;
+    return 28000;
   }
   return rpm;
 }
@@ -608,7 +612,7 @@ void boot_into_speed_set_mode() {
     // Now enter set loop
     while(true) {
       if (forward_selector_debounce_sync_active()) {
-        rpm += 500;
+        rpm += 1000;
         rpm = ValidateRpm(rpm);
         updateSpeedFixed(rpm);
         delay(100);
@@ -617,7 +621,7 @@ void boot_into_speed_set_mode() {
         while(forward_selector_active()) { ;; }
       }
       if (backward_selector_debounce_sync_active()) {
-        rpm -= 500;
+        rpm -= 1000;
         rpm = ValidateRpm(rpm);
         updateSpeedFixed(rpm);
         delay(100);

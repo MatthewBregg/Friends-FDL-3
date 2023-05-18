@@ -19,5 +19,5 @@ unsigned long read_speed_from_eeprom() {
   }
 
   // Otherwise return the default, safe RPM.
-  return 12500;
+  return 12000;
 }
