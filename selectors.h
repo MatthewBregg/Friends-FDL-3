@@ -53,7 +53,7 @@ void blip_flywheel_drives(unsigned long duration_ms) {
 bool full_auto = true;
 unsigned long forward_depressed = 0;
 unsigned long backward_depressed = 0;
-unsigned long depress_time;
+unsigned long depress_time = 1000;
 void check_selector_input() {
 
   if (forward_selector_active()) {
